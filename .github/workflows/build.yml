@@ -1,0 +1,35 @@
+name: Releaser
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+  workflow_dispatch:
+
+jobs:
+  Release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go environment
+        uses: actions/setup-go@v3.0.0
+        with:
+          go-version: 1.19.2
+
+      - name: Build
+        id: build
+        run: |
+          go build -trimpath -ldflags="-s -w" -o main github.com/koho/geonet
+          zip main main
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-amd64
+          path: main.zip
