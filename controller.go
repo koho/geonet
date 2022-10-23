@@ -44,11 +44,12 @@ func generateGeoip(c *gin.Context) {
 	}
 	for _, geoip := range geoipList.Entry {
 		if geoip.CountryCode == country {
-			if err = formatter.FormatGeoIP(c, geoip.Cidr); err != nil {
+			if ret, err := formatter.FormatGeoIP(c, geoip.Cidr); err == nil {
+				c.String(http.StatusOK, ret)
+			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
 			}
-			break
+			return
 		}
 	}
 }
@@ -81,11 +82,12 @@ func generateGeosite(c *gin.Context) {
 	}
 	for _, geoSite := range geoSiteList.Entry {
 		if geoSite.CountryCode == c.DefaultQuery("country", "CN") {
-			if err = formatter.FormatGeoSite(c, geoSite.Domain); err != nil {
+			if ret, err := formatter.FormatGeoSite(c, geoSite.Domain); err == nil {
+				c.String(http.StatusOK, ret)
+			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
 			}
-			break
+			return
 		}
 	}
 }

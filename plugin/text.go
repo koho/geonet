@@ -7,6 +7,7 @@ import (
 	router "github.com/v2fly/v2ray-core/v5/app/router/routercommon"
 	"net"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -28,10 +29,11 @@ func (t *textOut) GetDescription() string {
 	return t.Description
 }
 
-func (t *textOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) error {
+func (t *textOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) (string, error) {
+	var ret strings.Builder
 	ipType, err := strconv.Atoi(c.DefaultQuery("type", "4"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	ipType -= 2
 	if ipType < 0 {
@@ -40,29 +42,30 @@ func (t *textOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) error {
 	for _, v2rayCIDR := range cidrs {
 		if ip := v2rayCIDR.GetIp(); len(ip)>>ipType == 1 {
 			ipStr := net.IP(ip).String() + "/" + fmt.Sprint(v2rayCIDR.GetPrefix())
-			if _, err = c.Writer.WriteString(ipStr); err != nil {
-				return err
+			if _, err = ret.WriteString(ipStr); err != nil {
+				return "", err
 			}
-			if _, err = c.Writer.WriteString("\n"); err != nil {
-				return err
+			if _, err = ret.WriteString("\n"); err != nil {
+				return "", err
 			}
 		}
 	}
-	return nil
+	return ret.String(), nil
 }
 
-func (t *textOut) FormatGeoSite(c *gin.Context, domains []*router.Domain) error {
+func (t *textOut) FormatGeoSite(c *gin.Context, domains []*router.Domain) (string, error) {
+	var ret strings.Builder
 	domainMap := make(map[string]bool)
 	for _, site := range domains {
 		if !domainMap[site.Value] {
-			if _, err := c.Writer.WriteString(site.Value); err != nil {
-				return err
+			if _, err := ret.WriteString(site.Value); err != nil {
+				return "", err
 			}
-			if _, err := c.Writer.WriteString("\n"); err != nil {
-				return err
+			if _, err := ret.WriteString("\n"); err != nil {
+				return "", err
 			}
 			domainMap[site.Value] = true
 		}
 	}
-	return nil
+	return ret.String(), nil
 }

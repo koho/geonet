@@ -7,6 +7,7 @@ import (
 	router "github.com/v2fly/v2ray-core/v5/app/router/routercommon"
 	"net"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -30,10 +31,11 @@ func (s *shellOut) GetDescription() string {
 	return s.Description
 }
 
-func (s *shellOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) error {
+func (s *shellOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) (string, error) {
+	var ret strings.Builder
 	ipType, err := strconv.Atoi(c.DefaultQuery("type", "4"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	template := ipv4Template
 	if ipType == 6 {
@@ -46,17 +48,17 @@ func (s *shellOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) error {
 	for _, v2rayCIDR := range cidrs {
 		if ip := v2rayCIDR.GetIp(); len(ip)>>ipType == 1 {
 			ipStr := net.IP(ip).String() + "/" + fmt.Sprint(v2rayCIDR.GetPrefix())
-			if _, err = c.Writer.WriteString(fmt.Sprintf(template, ipStr, c.Query("opt"))); err != nil {
-				return err
+			if _, err = ret.WriteString(fmt.Sprintf(template, ipStr, c.Query("opt"))); err != nil {
+				return "", err
 			}
-			if _, err = c.Writer.WriteString("\n"); err != nil {
-				return err
+			if _, err = ret.WriteString("\n"); err != nil {
+				return "", err
 			}
 		}
 	}
-	return nil
+	return ret.String(), nil
 }
 
-func (s *shellOut) FormatGeoSite(c *gin.Context, domains []*router.Domain) error {
-	return lib.ErrNotImplemented
+func (s *shellOut) FormatGeoSite(c *gin.Context, domains []*router.Domain) (string, error) {
+	return "", lib.ErrNotImplemented
 }
