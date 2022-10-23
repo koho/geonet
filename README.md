@@ -38,6 +38,13 @@ No other options
 |-------|--------|--------------------|
 | dns   | string | DNS server address |
 
+### `ros` formatter
+
+| Query | Type   | Description     |
+|-------|--------|-----------------|
+| gw    | string | Gateway address |
+| table | string | Routing table   |
+
 ## API
 
 ### geoip
@@ -50,6 +57,7 @@ Supported formatters:
 
 - `text`
 - `shell`
+- `ros`
 
 ```shell
 curl http://127.0.0.1:8080/geoip?country=CN&type=4&format=shell&opt=dev%20pppoe-wan

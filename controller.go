@@ -18,9 +18,9 @@ func generateGeoip(c *gin.Context) {
 		return
 	}
 	country := c.DefaultQuery("country", "CN")
-	source := "https://github.com/v2fly/geoip/releases/latest/download/geoip.dat"
+	source := "https://ghproxy.com/https://github.com/v2fly/geoip/releases/latest/download/geoip.dat"
 	if country == "CN" {
-		source = "https://github.com/v2fly/geoip/releases/latest/download/cn.dat"
+		source = "https://ghproxy.com/https://github.com/v2fly/geoip/releases/latest/download/cn.dat"
 	}
 	resp, err := http.Get(source)
 	if err != nil {
@@ -59,7 +59,7 @@ func generateGeosite(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	resp, err := http.Get("https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat")
+	resp, err := http.Get("https://ghproxy.com/https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

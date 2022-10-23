@@ -10,43 +10,41 @@ import (
 )
 
 const (
-	typeShellOut = "shell"
-	descShellOut = "Convert data to shell format"
-	ipv4Template = "ip route add %s %s"
-	ipv6Template = "ip -6 route add %s %s"
+	typeRosOut  = "ros"
+	descRosOut  = "Convert data to RouterOS format"
+	rosTemplate = "add distance=1 dst-address=%s gateway=%s routing-table=%s"
 )
 
 func init() {
-	lib.RegisterFormatter(typeShellOut, &shellOut{
-		Description: descShellOut,
+	lib.RegisterFormatter(typeRosOut, &rosOut{
+		Description: descRosOut,
 	})
 }
 
-type shellOut struct {
+type rosOut struct {
 	Description string
 }
 
-func (s *shellOut) GetDescription() string {
-	return s.Description
+func (r *rosOut) GetDescription() string {
+	return r.Description
 }
 
-func (s *shellOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) error {
+func (r *rosOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) error {
 	ipType, err := strconv.Atoi(c.DefaultQuery("type", "4"))
 	if err != nil {
 		return err
-	}
-	template := ipv4Template
-	if ipType == 6 {
-		template = ipv6Template
 	}
 	ipType -= 2
 	if ipType < 0 {
 		ipType = 0
 	}
+	if _, err = c.Writer.WriteString("/ip route\n"); err != nil {
+		return err
+	}
 	for _, v2rayCIDR := range cidrs {
 		if ip := v2rayCIDR.GetIp(); len(ip)>>ipType == 1 {
 			ipStr := net.IP(ip).String() + "/" + fmt.Sprint(v2rayCIDR.GetPrefix())
-			if _, err = c.Writer.WriteString(fmt.Sprintf(template, ipStr, c.Query("opt"))); err != nil {
+			if _, err = c.Writer.WriteString(fmt.Sprintf(rosTemplate, ipStr, c.Query("gw"), c.DefaultQuery("table", "main"))); err != nil {
 				return err
 			}
 			if _, err = c.Writer.WriteString("\n"); err != nil {
@@ -57,6 +55,6 @@ func (s *shellOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) error {
 	return nil
 }
 
-func (s *shellOut) FormatGeoSite(c *gin.Context, domains []*router.Domain) error {
+func (r *rosOut) FormatGeoSite(c *gin.Context, domains []*router.Domain) error {
 	return lib.ErrNotImplemented
 }
