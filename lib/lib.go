@@ -7,6 +7,6 @@ import (
 
 type Formatter interface {
 	GetDescription() string
-	FormatGeoIP(*gin.Context, []*router.CIDR) (string, error)
-	FormatGeoSite(*gin.Context, []*router.Domain) (string, error)
+	FormatGeoIP(*gin.Context, []*router.CIDR, string) error
+	FormatGeoSite(*gin.Context, []*router.Domain, string) error
 }

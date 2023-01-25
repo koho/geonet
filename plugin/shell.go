@@ -6,6 +6,7 @@ import (
 	"github.com/koho/geonet/lib"
 	router "github.com/v2fly/v2ray-core/v5/app/router/routercommon"
 	"net"
+	"net/http"
 	"strconv"
 	"strings"
 )
@@ -31,11 +32,11 @@ func (s *shellOut) GetDescription() string {
 	return s.Description
 }
 
-func (s *shellOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) (string, error) {
+func (s *shellOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR, countryCode string) error {
 	var ret strings.Builder
 	ipType, err := strconv.Atoi(c.DefaultQuery("type", "4"))
 	if err != nil {
-		return "", err
+		return err
 	}
 	template := ipv4Template
 	if ipType == 6 {
@@ -49,16 +50,17 @@ func (s *shellOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR) (string, er
 		if ip := v2rayCIDR.GetIp(); len(ip)>>ipType == 1 {
 			ipStr := net.IP(ip).String() + "/" + fmt.Sprint(v2rayCIDR.GetPrefix())
 			if _, err = ret.WriteString(fmt.Sprintf(template, ipStr, c.Query("opt"))); err != nil {
-				return "", err
+				return err
 			}
 			if _, err = ret.WriteString("\n"); err != nil {
-				return "", err
+				return err
 			}
 		}
 	}
-	return ret.String(), nil
+	c.String(http.StatusOK, ret.String())
+	return nil
 }
 
-func (s *shellOut) FormatGeoSite(c *gin.Context, domains []*router.Domain) (string, error) {
-	return "", lib.ErrNotImplemented
+func (s *shellOut) FormatGeoSite(c *gin.Context, domains []*router.Domain, countryCode string) error {
+	return lib.ErrNotImplemented
 }
