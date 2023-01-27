@@ -9,12 +9,27 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"text/template"
 )
 
 const (
 	typeRosOut  = "ros"
 	descRosOut  = "Convert data to RouterOS format"
-	rosTemplate = "add distance=1 dst-address=%s gateway=%s routing-table=%s"
+	rosTemplate = `:local cidrs {[[.CIDRs]]};
+/log info "syncing routing table: [[.Table]]";
+:foreach cidr in=$cidrs do={
+    :if ([:len [/ip route find dst-address=$cidr gateway=[[.Gateway]] routing-table=[[.Table]]]] = 0) do={/ip route add distance=1 dst-address=$cidr gateway=[[.Gateway]] routing-table=[[.Table]];}
+    :delay [[.Delay]]ms;
+}
+:foreach i in=[/ip route find gateway=[[.Gateway]] routing-table=[[.Table]] (comment).""=""] do={
+    :local p [:find $cidrs [/ip route get $i dst-address]];
+    :if ([:type $p]="nil") do={
+        /ip route remove $i;
+    }
+    :delay [[.Delay]]ms;
+}
+/log info "updated routing table: [[.Table]]";
+`
 )
 
 func init() {
@@ -27,12 +42,22 @@ type rosOut struct {
 	Description string
 }
 
+type RosScript struct {
+	CIDRs   string
+	Gateway string
+	Table   string
+	Delay   string
+}
+
 func (r *rosOut) GetDescription() string {
 	return r.Description
 }
 
 func (r *rosOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR, countryCode string) error {
-	var ret strings.Builder
+	gw := c.Query("gw")
+	if gw == "" {
+		return lib.ErrInvalidParameter
+	}
 	ipType, err := strconv.Atoi(c.DefaultQuery("type", "4"))
 	if err != nil {
 		return err
@@ -41,24 +66,39 @@ func (r *rosOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR, countryCode s
 	if ipType < 0 {
 		ipType = 0
 	}
-	if _, err = ret.WriteString("/ip route\n"); err != nil {
-		return err
-	}
+	ipList := make([]string, 0)
 	for _, v2rayCIDR := range cidrs {
 		if ip := v2rayCIDR.GetIp(); len(ip)>>ipType == 1 {
 			ipStr := net.IP(ip).String() + "/" + fmt.Sprint(v2rayCIDR.GetPrefix())
-			if _, err = ret.WriteString(fmt.Sprintf(rosTemplate, ipStr, c.Query("gw"), c.DefaultQuery("table", "main"))); err != nil {
-				return err
-			}
-			if _, err = ret.WriteString("\n"); err != nil {
-				return err
-			}
+			ipList = append(ipList, "\""+ipStr+"\"")
 		}
 	}
-	c.String(http.StatusOK, ret.String())
+	script, err := format(rosTemplate, RosScript{
+		CIDRs:   strings.Join(ipList, ";"),
+		Gateway: gw,
+		Table:   c.DefaultQuery("table", "main"),
+		Delay:   c.DefaultQuery("delay", "50"),
+	})
+	if err != nil {
+		return err
+	}
+	c.String(http.StatusOK, script)
 	return nil
 }
 
 func (r *rosOut) FormatGeoSite(c *gin.Context, domains []*router.Domain, countryCode string) error {
 	return lib.ErrNotImplemented
+}
+
+func format(s string, v interface{}) (string, error) {
+	t, b := new(template.Template), new(strings.Builder)
+	t.Delims("[[", "]]")
+	tp, err := t.Parse(s)
+	if err != nil {
+		return "", err
+	}
+	if err = tp.Execute(b, v); err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
