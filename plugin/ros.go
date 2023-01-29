@@ -15,22 +15,22 @@ import (
 const (
 	typeRosOut  = "ros"
 	descRosOut  = "Convert data to RouterOS format"
-	RosTemplate = `:local table [[.Table]];
-:local gateway [[.Gateway]];
+	RosTemplate = `:local tb [[.Table]];
+:local gw [[.Gateway]];
 :local cidrs {[[.CIDRs]]};
-/log info "syncing routing table: $table";
+/log info "syncing routing table: $tb";
 :foreach cidr in=$cidrs do={
-    :if ([:len [/ip route find dst-address=$cidr gateway=$gateway routing-table=$table]] = 0) do={/ip route add distance=1 dst-address=$cidr gateway=$gateway routing-table=$table;}
+    :if ([:len [/ip route find dst-address=$cidr gateway=$gw routing-table=$tb]] = 0) do={/ip route add distance=1 dst-address=$cidr gateway=$gw routing-table=$tb;}
     :delay [[.Delay]]ms;
 }
-:foreach i in=[/ip route find gateway=$gateway routing-table=$table (comment).""=""] do={
+:foreach i in=[/ip route find gateway=$gw routing-table=$tb (comment).""=""] do={
     :local p [:find $cidrs [/ip route get $i dst-address]];
     :if ([:type $p]="nil") do={
         /ip route remove $i;
     }
     :delay [[.Delay]]ms;
 }
-/log info "updated routing table: $table";
+/log info "updated routing table: $tb";
 `
 )
 
