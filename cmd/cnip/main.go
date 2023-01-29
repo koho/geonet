@@ -20,7 +20,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ipv6List, err := readDat("https://ghproxy.com/https://github.com/v2fly/geoip/releases/latest/download/cn.dat")
+	ipv6List, err := readDat("https://github.com/v2fly/geoip/releases/latest/download/cn.dat")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,13 +82,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err = os.MkdirAll("dist", 0666); err != nil {
+	if err = os.MkdirAll("dist", 0750); err != nil {
 		log.Fatal(err)
 	}
-	if err = os.WriteFile("dist/cn-ipv4.txt", []byte(strings.Join(ipv4List, "\n")), 0666); err != nil {
+	if err = os.WriteFile("dist/cn-ipv4.txt", []byte(strings.Join(ipv4List, "\n")), 0660); err != nil {
 		log.Fatal(err)
 	}
-	if err = os.WriteFile("dist/cn-ipv4.rsc", []byte(script), 0666); err != nil {
+	if err = os.WriteFile("dist/cn-ipv4.rsc", []byte(script), 0660); err != nil {
 		log.Fatal(err)
 	}
 	fh, err := os.Create("dist/cn.mmdb")
