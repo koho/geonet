@@ -15,20 +15,22 @@ import (
 const (
 	typeRosOut  = "ros"
 	descRosOut  = "Convert data to RouterOS format"
-	rosTemplate = `:local cidrs {[[.CIDRs]]};
-/log info "syncing routing table: [[.Table]]";
+	RosTemplate = `:local table [[.Table]];
+:local gateway [[.Gateway]];
+:local cidrs {[[.CIDRs]]};
+/log info "syncing routing table: $table";
 :foreach cidr in=$cidrs do={
-    :if ([:len [/ip route find dst-address=$cidr gateway=[[.Gateway]] routing-table=[[.Table]]]] = 0) do={/ip route add distance=1 dst-address=$cidr gateway=[[.Gateway]] routing-table=[[.Table]];}
+    :if ([:len [/ip route find dst-address=$cidr gateway=$gateway routing-table=$table]] = 0) do={/ip route add distance=1 dst-address=$cidr gateway=$gateway routing-table=$table;}
     :delay [[.Delay]]ms;
 }
-:foreach i in=[/ip route find gateway=[[.Gateway]] routing-table=[[.Table]] (comment).""=""] do={
+:foreach i in=[/ip route find gateway=$gateway routing-table=$table (comment).""=""] do={
     :local p [:find $cidrs [/ip route get $i dst-address]];
     :if ([:type $p]="nil") do={
         /ip route remove $i;
     }
     :delay [[.Delay]]ms;
 }
-/log info "updated routing table: [[.Table]]";
+/log info "updated routing table: $table";
 `
 )
 
@@ -73,10 +75,10 @@ func (r *rosOut) FormatGeoIP(c *gin.Context, cidrs []*router.CIDR, countryCode s
 			ipList = append(ipList, "\""+ipStr+"\"")
 		}
 	}
-	script, err := format(rosTemplate, RosScript{
+	script, err := Format(RosTemplate, RosScript{
 		CIDRs:   strings.Join(ipList, ";"),
-		Gateway: gw,
-		Table:   c.DefaultQuery("table", "main"),
+		Gateway: "\"" + gw + "\"",
+		Table:   "\"" + c.DefaultQuery("table", "main") + "\"",
 		Delay:   c.DefaultQuery("delay", "50"),
 	})
 	if err != nil {
@@ -90,7 +92,7 @@ func (r *rosOut) FormatGeoSite(c *gin.Context, domains []*router.Domain, country
 	return lib.ErrNotImplemented
 }
 
-func format(s string, v interface{}) (string, error) {
+func Format(s string, v interface{}) (string, error) {
 	t, b := new(template.Template), new(strings.Builder)
 	t.Delims("[[", "]]")
 	tp, err := t.Parse(s)
