@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/koho/geonet/plugin"
 	"github.com/maxmind/mmdbwriter"
 	"github.com/maxmind/mmdbwriter/mmdbtype"
@@ -20,7 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ipv6List, err := readDat("https://github.com/v2fly/geoip/releases/latest/download/cn.dat")
+	ipv6List, err := readList("https://ispip.clang.cn/all_cn_ipv6.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,48 +32,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ipv4ListF := make([]string, 0)
-	for _, ipv4 := range ipv4List {
-		ipv4Str := strings.TrimSpace(ipv4)
-		if ipv4Str == "" {
-			continue
-		}
-		_, network, err := net.ParseCIDR(ipv4Str)
-		if err != nil {
-			log.Fatal(err)
-		}
-		record := mmdbtype.Map{}
-		country := mmdbtype.Map{}
-		record["country"] = country
-		country["iso_code"] = mmdbtype.String("CN")
-		if err = writer.Insert(network, record); err != nil {
-			log.Fatal(err)
-		}
-		ipv4ListF = append(ipv4ListF, "\""+ipv4Str+"\"")
+	ipv4, err := insertIPList(writer, ipv4List)
+	if err != nil {
+		log.Fatal(err)
 	}
-	for _, geoip := range ipv6List.Entry {
-		if geoip.CountryCode == "CN" {
-			for _, v2rayCIDR := range geoip.Cidr {
-				if ip := v2rayCIDR.GetIp(); len(ip) == 16 {
-					ipStr := net.IP(ip).String() + "/" + fmt.Sprint(v2rayCIDR.GetPrefix())
-					_, network, err := net.ParseCIDR(ipStr)
-					if err != nil {
-						log.Fatal(err)
-					}
-					record := mmdbtype.Map{}
-					country := mmdbtype.Map{}
-					record["country"] = country
-					country["iso_code"] = mmdbtype.String("CN")
-					if err = writer.Insert(network, record); err != nil {
-						log.Fatal(err)
-					}
-				}
-			}
-			break
-		}
+	if _, err = insertIPList(writer, ipv6List); err != nil {
+		log.Fatal(err)
 	}
 	script, err := plugin.Format(plugin.RosTemplate, plugin.RosScript{
-		CIDRs:   strings.Join(ipv4ListF, ";"),
+		CIDRs:   strings.Join(ipv4, ";"),
 		Gateway: "[/ip route get [/ip route find routing-table=main dst-address=0.0.0.0/0] gateway]",
 		Table:   "[/routing table get [/routing table find comment~\"cn\"] name]",
 		Delay:   "50",
@@ -88,6 +54,9 @@ func main() {
 	if err = os.WriteFile("dist/cn-ipv4.txt", []byte(strings.Join(ipv4List, "\n")), 0660); err != nil {
 		log.Fatal(err)
 	}
+	if err = os.WriteFile("dist/cn-ipv6.txt", []byte(strings.Join(ipv6List, "\n")), 0660); err != nil {
+		log.Fatal(err)
+	}
 	if err = os.WriteFile("dist/cn-ipv4.rsc", []byte(script), 0660); err != nil {
 		log.Fatal(err)
 	}
@@ -96,8 +65,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer fh.Close()
-	_, err = writer.WriteTo(fh)
-	if err != nil {
+	if _, err = writer.WriteTo(fh); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -136,4 +104,28 @@ func readDat(source string) (*router.GeoIPList, error) {
 		return nil, err
 	}
 	return &geoipList, nil
+}
+
+func insertIPList(writer *mmdbwriter.Tree, ipList []string) ([]string, error) {
+	inserted := make([]string, 0)
+	for _, ip := range ipList {
+		ipStr := strings.TrimSpace(ip)
+		if ipStr == "" {
+			continue
+		}
+		_, network, err := net.ParseCIDR(ipStr)
+		if err != nil {
+			return inserted, err
+		}
+		record := mmdbtype.Map{
+			"country": mmdbtype.Map{
+				"iso_code": mmdbtype.String("CN"),
+			},
+		}
+		if err = writer.Insert(network, record); err != nil {
+			return inserted, err
+		}
+		inserted = append(inserted, "\""+ipStr+"\"")
+	}
+	return inserted, nil
 }
