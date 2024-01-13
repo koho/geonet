@@ -32,7 +32,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ipv4, err := insertIPList(writer, append(ipv4List, "1.12.12.12/32", "120.53.53.53/32"))
+	ipv4List = append(ipv4List, "1.12.12.12/32", "120.53.53.53/32")
+	ipv4, err := insertIPList(writer, ipv4List)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,7 +52,7 @@ func main() {
 	if err = os.MkdirAll("dist", 0750); err != nil {
 		log.Fatal(err)
 	}
-	if err = os.WriteFile("dist/cn-ipv4.txt", []byte(strings.Join(ipv4, "\n")), 0660); err != nil {
+	if err = os.WriteFile("dist/cn-ipv4.txt", []byte(strings.Join(ipv4List, "\n")), 0660); err != nil {
 		log.Fatal(err)
 	}
 	if err = os.WriteFile("dist/cn-ipv6.txt", []byte(strings.Join(ipv6List, "\n")), 0660); err != nil {
