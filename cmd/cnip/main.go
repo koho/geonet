@@ -51,7 +51,7 @@ func main() {
 	if err = os.MkdirAll("dist", 0750); err != nil {
 		log.Fatal(err)
 	}
-	if err = os.WriteFile("dist/cn-ipv4.txt", []byte(strings.Join(ipv4List, "\n")), 0660); err != nil {
+	if err = os.WriteFile("dist/cn-ipv4.txt", []byte(strings.Join(ipv4, "\n")), 0660); err != nil {
 		log.Fatal(err)
 	}
 	if err = os.WriteFile("dist/cn-ipv6.txt", []byte(strings.Join(ipv6List, "\n")), 0660); err != nil {
