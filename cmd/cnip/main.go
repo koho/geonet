@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ipv4, err := insertIPList(writer, ipv4List)
+	ipv4, err := insertIPList(writer, append(ipv4List, "1.12.12.12/32", "120.53.53.53/32"))
 	if err != nil {
 		log.Fatal(err)
 	}
